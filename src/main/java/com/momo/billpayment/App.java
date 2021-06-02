@@ -25,7 +25,7 @@ public class App {
 		
 		while (true) {
 			String commandText = bufferedReader.readLine();
-			if (commandText == null || "exit".equalsIgnoreCase(commandText)) {
+			if (commandText == null || "EXIT".equalsIgnoreCase(commandText)) {
 				break;
 			} else {
 				// if execution is not success then exit as there can be dependencies with commands
