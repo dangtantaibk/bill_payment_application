@@ -1,10 +1,15 @@
 package com.momo.billpayment.service;
 
 import com.momo.billpayment.domain.Bill;
+import com.momo.billpayment.service.TransactionsSystem.Transaction;
 import java.util.List;
 
 import com.momo.billpayment.service.exceptions.BillPaymentException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CommandExecutor {
 
@@ -73,19 +78,19 @@ public class CommandExecutor {
                 command = new ListBillCommand(commandStringArray);
                 break;
             case PAY:
-                command = new LeaveCommand(commandStringArray);
+                command = new PayCommand(commandStringArray);
                 break;
             case DUE_DATE:
-                command = new StatusCommand(commandStringArray);
+                command = new DueDateCommand(commandStringArray);
                 break;
             case SCHEDULE:
-                command = new RegistrationNumbersForColorCommand(commandStringArray);
+                command = new ScheduleCommand(commandStringArray);
                 break;
             case LIST_PAYMENT:
-                command = new SlotNumbersForColorCommand(commandStringArray);
+                command = new ListPaymentCommand(commandStringArray);
                 break;
             case SEARCH_BILL_BY_PROVIDER:
-                command = new SlotNumberCommand(commandStringArray);
+                command = new SearchBillCommand(commandStringArray);
                 break;
             default:
                 System.out.println("Unknown Command");
@@ -95,7 +100,7 @@ public class CommandExecutor {
         try {
             command.validate();
         } catch (IllegalArgumentException e) {
-            System.out.println("Please provide a valid argument");
+            System.out.println(e.getMessage());
             return false;
         }
 
@@ -134,7 +139,7 @@ public class CommandExecutor {
     }
 
     /**
-     * Command Implementing create_parking_lot
+     * Command Implementing Cash In
      *
      */
     private class CashInCommand implements Command {
@@ -159,7 +164,6 @@ public class CommandExecutor {
     }
 
     /**
-     * holds the responsibility of implementing park command
      *
      */
     private class ListBillCommand implements Command {
@@ -172,7 +176,7 @@ public class CommandExecutor {
 
         public void validate() {
             if (commandStringArray.length != 1) {
-                throw new IllegalArgumentException("park command should have exactly 2 arguments");
+                throw new IllegalArgumentException("ListBill should have exactly 0 arguments");
             }
         }
 
@@ -187,7 +191,7 @@ public class CommandExecutor {
                 s.append(String.format("%-20s", b.getType()));
                 s.append(String.format("%-20s", b.getAmount()));
                 s.append(String.format("%-20s", formatter.format(b.getDueDate())));
-                s.append(String.format("%-20s", b.getState() ? "PAID": "NOT_PAID"));
+                s.append(String.format("%-20s", b.getState() ? "PAID" : "NOT_PAID"));
                 s.append(String.format("%-20s", b.getProvider()));
                 s.append(String.format("\n"));
             }
@@ -196,158 +200,201 @@ public class CommandExecutor {
     }
 
     /**
-     * holds the responsibility of implementing leave command
      *
      */
-    private class LeaveCommand implements Command {
+    private class PayCommand implements Command {
 
         private String[] commandStringArray;
 
-        LeaveCommand(String[] s) {
+        PayCommand(String[] s) {
             commandStringArray = s;
         }
 
         public void validate() {
-            if (commandStringArray.length != 2) {
-                throw new IllegalArgumentException("leave command should have exactly 1 argument");
+            if (commandStringArray.length < 2) {
+                throw new IllegalArgumentException("Pay command should have more than 1 or equal 1 argument");
             }
         }
 
         public String execute() {
-//            TransactionsSystem ticketingSystem = TransactionsSystem.getInstance();
-//            ticketingSystem.exitVehicle(Integer.parseInt(commandStringArray[1]));
-//            return "Slot number " + commandStringArray[1] + " is free";
-            return "";
+            TransactionsSystem transactionsSystem = TransactionsSystem.getInstance();
+            long totalAmount = 0;
+            for (String idStr : commandStringArray) {
+                if (idStr.equals("PAY")) {
+                    continue;
+                } 
+                int billId = Integer.parseInt(idStr);
+                Bill bill = transactionsSystem.getBillById(billId);
+                if (bill == null) {
+                    throw new  BillPaymentException("Sorry! Not found a bill with such id " + billId);
+                }
+                if (bill.getState()) {
+                     throw new  BillPaymentException("Sorry! Bill was paid with such id " + billId);
+                }
+                totalAmount += bill.getAmount();
+            }
+            
+            long userAmount = transactionsSystem.getUserAmount();
+            if (userAmount < totalAmount) {
+                throw new  BillPaymentException("Sorry! Not enough fund to proceed with payment. ");
+            }
+            StringBuilder s = new StringBuilder();
+            
+            for (String idStr : commandStringArray) {
+                if (idStr.equals("PAY")) {
+                    continue;
+                } 
+                int billId = Integer.parseInt(idStr);
+                Bill bill = transactionsSystem.getBillById(billId);
+                transactionsSystem.insertTransactions(bill.getAmount(), bill.getDueDate(), 1, bill.getBillNo());
+                transactionsSystem.updateBillingPaid(bill.getBillNo());
+                transactionsSystem.pay(bill.getAmount());
+                s.append("Payment has been completed for Bill with id " + bill.getBillNo() + ".\n");
+            }
+            s.append("Your current balance is: " + transactionsSystem.getUserAmount());
+            return s.toString();
         }
     }
 
     /**
-     * holds the responsibility of implementing status command
      *
      */
-    private class StatusCommand implements Command {
+    private class DueDateCommand implements Command {
 
         private String[] commandStringArray;
 
-        StatusCommand(String[] s) {
+        DueDateCommand(String[] s) {
             commandStringArray = s;
         }
 
         public void validate() {
             if (commandStringArray.length != 1) {
-                throw new IllegalArgumentException("status command should have no arguments");
+                throw new IllegalArgumentException("DueDate command should have no arguments");
             }
         }
 
         public String execute() {
-//            TransactionsSystem ticketingSystem = TransactionsSystem.getInstance();
-//            List<StatusResponse> statusResponseList = ticketingSystem.getStatus();
-//
-//            StringBuilder outputStringBuilder = new StringBuilder("Slot No.    Registration No    Colour");
-//            for (StatusResponse statusResponse : statusResponseList) {
-//                outputStringBuilder.append("\n").append(statusResponse);
-//            }
-//            return outputStringBuilder.toString();
-            return "";
+            TransactionsSystem transactionsSystem = TransactionsSystem.getInstance();
+            List<Bill> listBill = transactionsSystem.getListBillDueDate();
+            StringBuilder s = new StringBuilder();
+
+            s.append(String.format("%-20s%-20s%-20s%-20s%-20s%-20s\n", "Bill No.", "Type", "Amount", "Due Date", "State", "PROVIDER"));
+            for (Bill b : listBill) {
+                s.append(String.format("%-20s", b.getBillNo()));
+                s.append(String.format("%-20s", b.getType()));
+                s.append(String.format("%-20s", b.getAmount()));
+                s.append(String.format("%-20s", formatter.format(b.getDueDate())));
+                s.append(String.format("%-20s", b.getState() ? "PAID" : "NOT_PAID"));
+                s.append(String.format("%-20s", b.getProvider()));
+                s.append(String.format("\n"));
+            }
+            return s.toString();
         }
     }
 
     /**
-     * holds the responsibility of implementing
-     * registration_numbers_for_cars_with_colour command
      *
      */
-    private class RegistrationNumbersForColorCommand implements Command {
+    private class ScheduleCommand implements Command {
 
         private String[] commandStringArray;
 
-        RegistrationNumbersForColorCommand(String[] s) {
+        ScheduleCommand(String[] s) {
+            commandStringArray = s;
+        }
+
+        public void validate() {
+            if (commandStringArray.length != 3) {
+                throw new IllegalArgumentException(
+                        "ScheduleCommand command should have exactly 2 argument");
+            }
+        }
+
+        public String execute() {
+            int id = Integer.parseInt(commandStringArray[1]);
+            String dateStr = commandStringArray[2];
+            try {
+                formatter.parse(dateStr);
+            } catch (ParseException ex) {
+                throw new BillPaymentException(
+                        "2nd argument is not correct date format");
+            }
+
+            return "Payment for bill id " + id + " is scheduled on " + dateStr + " ";
+        }
+    }
+
+    /**
+     *
+     */
+    private class ListPaymentCommand implements Command {
+
+        private String[] commandStringArray;
+
+        ListPaymentCommand(String[] s) {
+            commandStringArray = s;
+        }
+
+        public void validate() {
+            if (commandStringArray.length != 1) {
+                throw new IllegalArgumentException(
+                        "ListPayment command should have exactly 0 argument");
+            }
+        }
+
+        public String execute() {
+            TransactionsSystem transactionsSystem = TransactionsSystem.getInstance();
+            List<Transaction> listTrans = transactionsSystem.getListTransactions();
+            StringBuilder s = new StringBuilder();
+            s.append(String.format("%-20s%-20s%-20s%-20s%-20s\n", "No.", "Amount", "Payment Date", "State", "Bill Id"));
+            for (Transaction b : listTrans) {
+                s.append(String.format("%-20s", b.no));
+                s.append(String.format("%-20s", b.amount));
+                s.append(String.format("%-20s", formatter.format(b.paymentDate)));
+                        // With state == 1 -> PROCESSED;        2 -> PENDING     
+                s.append(String.format("%-20s", b.state == 1 ? "PROCESSED" : "PENDING"));
+                s.append(String.format("%-20s", b.billNo));
+                s.append(String.format("\n"));
+            }
+            return s.toString();
+        }
+    }
+
+    /**
+     *
+     */
+    private class SearchBillCommand implements Command {
+
+        private String[] commandStringArray;
+
+        SearchBillCommand(String[] s) {
             commandStringArray = s;
         }
 
         public void validate() {
             if (commandStringArray.length != 2) {
                 throw new IllegalArgumentException(
-                        "registration_numbers_for_cars_with_colour command should have exactly 1 argument");
+                        "SearchBill Command should have exactly 1 argument");
             }
         }
 
         public String execute() {
-//            TransactionsSystem ticketingSystem = TransactionsSystem.getInstance();
-//            List<String> registrationNumbersList = ticketingSystem
-//                    .getRegistrationNumbersFromColor(commandStringArray[1]);
-//            StringBuilder outputStringBuilder = new StringBuilder();
-//            for (String registrationNumber : registrationNumbersList) {
-//                if (outputStringBuilder.length() > 0) {
-//                    outputStringBuilder.append(", ");
-//                }
-//                outputStringBuilder.append(registrationNumber);
-//            }
-//            return outputStringBuilder.toString();
-            return "";
-        }
-    }
+            String provider = commandStringArray[1];
+            TransactionsSystem transactionsSystem = TransactionsSystem.getInstance();
+            List<Bill> listBill = transactionsSystem.getListByProvider(provider);
+            StringBuilder s = new StringBuilder();
 
-    /**
-     * holds the responsibility of implementing
-     * slot_numbers_for_cars_with_colour command
-     *
-     */
-    private class SlotNumbersForColorCommand implements Command {
-
-        private String[] commandStringArray;
-
-        SlotNumbersForColorCommand(String[] s) {
-            commandStringArray = s;
-        }
-
-        public void validate() {
-            if (commandStringArray.length != 2) {
-                throw new IllegalArgumentException(
-                        "slot_numbers_for_cars_with_colour command should have exactly 1 argument");
+            s.append(String.format("%-20s%-20s%-20s%-20s%-20s%-20s\n", "Bill No.", "Type", "Amount", "Due Date", "State", "PROVIDER"));
+            for (Bill b : listBill) {
+                s.append(String.format("%-20s", b.getBillNo()));
+                s.append(String.format("%-20s", b.getType()));
+                s.append(String.format("%-20s", b.getAmount()));
+                s.append(String.format("%-20s", formatter.format(b.getDueDate())));
+                s.append(String.format("%-20s", b.getState() ? "PAID" : "NOT_PAID"));
+                s.append(String.format("%-20s", b.getProvider()));
+                s.append(String.format("\n"));
             }
-        }
-
-        public String execute() {
-//            TransactionsSystem ticketingSystem = TransactionsSystem.getInstance();
-//            List<Integer> slotNumbersList = ticketingSystem.getSlotNumbersFromColor(commandStringArray[1]);
-//            StringBuilder outputStringBuilder = new StringBuilder();
-//            for (int slotNumber : slotNumbersList) {
-//                if (outputStringBuilder.length() > 0) {
-//                    outputStringBuilder.append(", ");
-//                }
-//                outputStringBuilder.append(slotNumber);
-//            }
-//            return outputStringBuilder.toString();
-            return "";
-        }
-    }
-
-    /**
-     * holds the responsibility of implementing
-     * slot_number_for_registration_number command
-     *
-     */
-    private class SlotNumberCommand implements Command {
-
-        private String[] commandStringArray;
-
-        SlotNumberCommand(String[] s) {
-            commandStringArray = s;
-        }
-
-        public void validate() {
-            if (commandStringArray.length != 2) {
-                throw new IllegalArgumentException(
-                        "slot_number_for_registration_number command should have exactly 1 argument");
-            }
-        }
-
-        public String execute() {
-//            TransactionsSystem ticketingSystem = TransactionsSystem.getInstance();
-//            int slotNumber = ticketingSystem.getSlotNumberFromRegistrationNumber(commandStringArray[1]);
-//            return "" + slotNumber;
-            return "";
+            return s.toString();
         }
     }
 

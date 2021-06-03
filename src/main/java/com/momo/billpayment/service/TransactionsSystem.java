@@ -22,6 +22,7 @@ class TransactionsSystem {
      */
     TransactionsSystem(Billing parkingLot, User user) {
         this.billing = parkingLot;
+        this.user = user;
         transactions = new HashMap<Integer, Transaction>();
     }
 
@@ -62,118 +63,99 @@ class TransactionsSystem {
     }
     
     /**
-     * Parks a vehicle
+     * Get bill by Id
      *
-     * @return slotNumber => slot number at which the vehicle needs to be parked
+     * @return bill => Get bill by id
      */
-//    int issueParkingTicket(Vehicle vehicle) {
-//        if (vehicle == null) {
-//            throw new IllegalArgumentException("Vehicle cannot be null");
-//        }
-//        int assignedSlotNumber = billing.fillAvailableSlot();
-//        Transaction ticket = new Transaction(assignedSlotNumber, vehicle);
-//        transactions.put(assignedSlotNumber, ticket);
-//        return assignedSlotNumber;
-//    }
-//
-//    /**
-//     * Exits a vehicle from the Bill payment
-//     *
-//     * @param registrationNumber
-//     * @return slotNumber => the slot from the car has exited.
-//     */
-//    void exitVehicle(int slotNumber) {
-//        if (transactions.containsKey(slotNumber)) {
-//            billing.emptySlot(slotNumber);
-//            transactions.remove(slotNumber);
-//            return;
-//        } else {
-//            throw new BillPaymentException("No vehicle found at given slot. Incorrect input");
-//        }
-//    }
-//
-//    /**
-//     * returns all the registration numbers of the vehicles with the given color
-//     *
-//     * @param color => Color of the Vehicle
-//     * @return List of all the registration numbers of the vehicles with the
-//     * given color
-//     */
-//    List<String> getRegistrationNumbersFromColor(String color) {
-//        if (color == null) {
-//            throw new IllegalArgumentException("color cannot be null");
-//        }
-//        List<String> registrationNumbers = new ArrayList<String>();
-//        for (Transaction ticket : transactions.values()) {
-//            if (color.equals(ticket.vehicle.getColor())) {
-//                registrationNumbers.add(ticket.vehicle.getRegistrationNumber());
-//            }
-//        }
-//        return registrationNumbers;
-//    }
-//
-//    /**
-//     * returns the slot number at which the Vehicle with given
-//     * registrationNumber is parked
-//     *
-//     * @param registrationNumber => Registration Number of the Vehicle
-//     * @return slot number at which the Vehicle with given registrationNumber is
-//     * parked
-//     */
-//    int getSlotNumberFromRegistrationNumber(String registrationNumber) {
-//        if (registrationNumber == null) {
-//            throw new IllegalArgumentException("registrationNumber cannot be null");
-//        }
-//        for (Transaction ticket : transactions.values()) {
-//            if (registrationNumber.equals(ticket.vehicle.getRegistrationNumber())) {
-//                return ticket.slotNumber;
-//            }
-//        }
-//
-//        throw new BillPaymentException("Not found");
-//    }
-//
-//    /**
-//     * returns all the slot numbers of the vehicles with the given color
-//     *
-//     * @param color => Color of the Vehicle
-//     * @return List of all the slot numbers of the vehicles with the given color
-//     */
-//    List<Integer> getSlotNumbersFromColor(String color) {
-//        if (color == null) {
-//            throw new IllegalArgumentException("color cannot be null");
-//        }
-//        List<Integer> registrationNumbers = new ArrayList<Integer>();
-//        for (Transaction ticket : transactions.values()) {
-//            if (color.equals(ticket.vehicle.getColor())) {
-//                registrationNumbers.add(ticket.slotNumber);
-//            }
-//        }
-//        return registrationNumbers;
-//    }
-//
-//    /**
-//     * returns the status of the ticketing system, a list of all the tickets
-//     * converted to status objects
-//     *
-//     * @return List of StatusResponse => List of (slotNumber,
-//     * registrationNumber, color)
-//     */
-//    List<StatusResponse> getStatus() {
-//        List<StatusResponse> statusResponseList = new ArrayList<StatusResponse>();
-//        for (Transaction ticket : transactions.values()) {
-//            statusResponseList.add(new StatusResponse(ticket.slotNumber, ticket.vehicle.getRegistrationNumber(),
-//                    ticket.vehicle.getColor()));
-//        }
-//        return statusResponseList;
-//    }
+    Bill getBillById(int id) {
+        return billing.getBillById(id);
+    }
+    
+    /**
+     * List bill due date
+     *
+     * @return bills => List bill with due date
+     */
+    List<Bill> getListBillDueDate() {
+        List<Bill> bills = billing.findBillDueDate();
+        return bills;
+    }
+    
+    /**
+     * Search bill provider by
+     *
+     * @return bills => List bill with due date
+     */
+    List<Bill> getListByProvider(String provider) {
+        List<Bill> bills = billing.findBillByProvider(provider);
+        return bills;
+    }
+    
+    /**
+     * Get user amount
+     *
+     * @return user's amount
+     */
+    long getUserAmount() {
+        return user.getCash();
+    }
+    
+    /**
+     * Get user amount
+     *
+     * @return user's amount
+     */
+    void pay(long amount) {
+        int pay = user.pay(amount);
+        if (pay == -1) {
+            throw new BillPaymentException("Amount is not enough");
+        }
+        return;
+    }
+    
+    /**
+     * Insert transaction
+     *
+     */
+    void insertTransactions(long amount, Date paymentDate,int state, int billNo) {
+        int no = transactions.size() + 1;
+        
+        Transaction transaction = new Transaction(no, amount, paymentDate, state, billNo);
+        transactions.put(no, transaction);
+        return;
+    }
+    
+    /**
+     * Update billing paid
+     *
+     */
+    void updateBillingPaid(int id) {
+        billing.updateBillingPaid(id);
+        return;
+    }
+
 
     /**
-     * Ticketing System issues a ticket => an object known only to Ticketing
+     * Get list transaction
+     * registrationNumber is parked
+     *
+     * @return List Transaction
+     */
+    List<Transaction> getListTransactions() {
+        List<Transaction> ret = new ArrayList<Transaction>();
+        for (Transaction transaction : transactions.values()) {
+            ret.add(transaction);
+        }
+
+        return ret;
+    }
+
+    /**
+     * Transactions System issues a transaction => an object known only to Transaction
      * System
      *
      */
-    private class Transaction {
+    public class Transaction {
 
         int no;
         long amount;

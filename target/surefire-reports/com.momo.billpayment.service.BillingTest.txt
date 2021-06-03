@@ -1,0 +1,24 @@
+-------------------------------------------------------------------------------
+Test set: com.momo.billpayment.service.BillingTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 5, Skipped: 0, Time elapsed: 0.017 s <<< FAILURE! - in com.momo.billpayment.service.BillingTest
+fillAvailableSlotWhenSlotIsAvailable(com.momo.billpayment.service.BillingTest)  Time elapsed: 0.005 s  <<< ERROR!
+java.lang.RuntimeException: Uncompilable source code - Erroneous ctor sym type: com.momo.billpayment.service.Billing.<init>
+	at com.momo.billpayment.service.BillingTest.fillAvailableSlotWhenSlotIsAvailable(BillingTest.java:13)
+
+fillAvailableSlotWhenNoSlotIsAvailable(com.momo.billpayment.service.BillingTest)  Time elapsed: 0 s  <<< ERROR!
+java.lang.RuntimeException: Uncompilable source code - Erroneous ctor sym type: com.momo.billpayment.service.Billing.<init>
+	at com.momo.billpayment.service.BillingTest.fillAvailableSlotWhenNoSlotIsAvailable(BillingTest.java:24)
+
+emptySlotWithValidSlotNumber(com.momo.billpayment.service.BillingTest)  Time elapsed: 0 s  <<< ERROR!
+java.lang.RuntimeException: Uncompilable source code - Erroneous ctor sym type: com.momo.billpayment.service.Billing.<init>
+	at com.momo.billpayment.service.BillingTest.emptySlotWithValidSlotNumber(BillingTest.java:40)
+
+emptySlotWithInvalidSlotNumber(com.momo.billpayment.service.BillingTest)  Time elapsed: 0 s  <<< ERROR!
+java.lang.RuntimeException: Uncompilable source code - Erroneous ctor sym type: com.momo.billpayment.service.Billing.<init>
+	at com.momo.billpayment.service.BillingTest.emptySlotWithInvalidSlotNumber(BillingTest.java:62)
+
+emptySlotWhichIsAlreadyEmpty(com.momo.billpayment.service.BillingTest)  Time elapsed: 0.001 s  <<< ERROR!
+java.lang.RuntimeException: Uncompilable source code - Erroneous ctor sym type: com.momo.billpayment.service.Billing.<init>
+	at com.momo.billpayment.service.BillingTest.emptySlotWhichIsAlreadyEmpty(BillingTest.java:81)
+

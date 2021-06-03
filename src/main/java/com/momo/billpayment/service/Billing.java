@@ -54,6 +54,31 @@ class Billing {
         }
         return bs;
     }
+    
+    /**
+     * Get bill
+     *
+     * @return
+     */
+    Bill getBillById(int id) {
+        return bills.getOrDefault(id, null);
+    }
+
+    
+    /**
+     * Update bill
+     *
+     * @return
+     */
+    void updateBillingPaid(int id) {
+        Bill bill = bills.getOrDefault(id, null);
+        if (bill == null) {
+            throw new BillPaymentException("No billing");
+        }
+        bill.setState(true);
+        bills.put(bill.getBillNo(), bill);
+        return;
+    }
 
     /**
      * Finds the bill due date
